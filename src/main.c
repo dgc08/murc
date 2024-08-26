@@ -10,6 +10,7 @@ bool opt_fpic;
 
 static FileType opt_x;
 static StringArray opt_include;
+static bool opt_mur = false;
 static bool opt_E;
 static bool opt_M;
 static bool opt_MD;
@@ -147,6 +148,11 @@ static void parse_args(int argc, char **argv) {
 
     if (!strcmp(argv[i], "-fno-common")) {
       opt_fcommon = false;
+      continue;
+    }
+
+    if (!strcmp(argv[i], "-mur")) {
+      opt_mur = true;
       continue;
     }
 
@@ -498,7 +504,7 @@ static void cc1(void) {
   FILE *output_buf = open_memstream(&buf, &buflen);
 
   // Traverse the AST to emit assembly.
-  codegen(prog, output_buf);
+  codegen(prog, output_buf, opt_mur);
   fclose(output_buf);
 
   // Write the asembly text to a file.

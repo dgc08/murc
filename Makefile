@@ -9,7 +9,7 @@ TESTS=$(TEST_SRCS:.c=.exe)
 
 # Stage 1
 
-chibicc: $(OBJS)
+murc: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 $(TMP_DIR)/%.o: %.c
