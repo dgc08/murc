@@ -1,4 +1,4 @@
-CFLAGS=-std=c11 -g -fno-common -Wall -Wno-switch
+CFLAGS=-std=c99 -g -fno-common -Wall -Wno-switch
 
 TMP_DIR = tmp
 SRCS=$(wildcard src/*.c)
