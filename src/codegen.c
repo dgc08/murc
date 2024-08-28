@@ -170,7 +170,7 @@ static void gen_expr(Node *node) {
     return;
   case ND_MEMZERO:
     // `rep stosb` is equivalent to `memset(%rdi, %al, %rcx)`.
-    println("  movz l.%s", node->var->name);
+    error_tok(node->tok, "not implemented (memzero)");
     return;
   case ND_COND: {
     error("one line condition unsupported");
@@ -182,9 +182,9 @@ static void gen_expr(Node *node) {
     println("  jz s3 .L.set_true.%d", c);
     println("  movz s3");
     println("  jmp .L.end.%d", c);
-    println("  .L.set_true.%d", c);
+    println("  .L.set_true.%d:", c);
     println("  inc s3");
-    println("  .L.end.%d", c);
+    println("  .L.end.%d:", c);
     return;
   case ND_BITNOT:
     error("BITNOT unsupported");
@@ -217,6 +217,7 @@ static void gen_expr(Node *node) {
     }
     case ND_FUNCALL: {
       println("  ;; funcall");
+      warn_tok(node->tok, "no funcall supported atm");
       /* if (node->lhs->kind == ND_VAR && !strcmp(node->lhs->var->name, "alloca")) { */
       /*   gen_expr(node->args); */
       /*   println("  mov %%rax, %%rdi"); */
@@ -331,11 +332,10 @@ static void gen_expr(Node *node) {
       println("  add s3 s2");
       return;
     case ND_SUB:
-      return;
     case ND_MUL:
-      return;
     case ND_DIV:
     case ND_MOD:
+      warn_tok(node->tok, "Arithmetic Operation unsupported atm");
       return;
   case ND_BITAND:
     error("BITAND unsupported");
@@ -350,6 +350,7 @@ static void gen_expr(Node *node) {
   case ND_NE:
   case ND_LT:
   case ND_LE:
+    warn_tok(node->tok, "Operation unsupported atm");
     return;
   case ND_SHL:
     error("SHL unsupported");
@@ -378,32 +379,31 @@ static void gen_stmt(Node *node) {
     return;
   }
   case ND_FOR: {
-    /* int c = count(); */
-    /* if (node->init) */
-    /*   gen_stmt(node->init); */
-    /* println(".L.begin.%d:", c); */
-    /* if (node->cond) { */
-    /*   gen_expr(node->cond); */
-    /*   cmp_zero(node->cond->ty); */
-    /*   println("  je %s", node->brk_label); */
-    /* } */
-    /* gen_stmt(node->then); */
-    /* println("$%s:", node->cont_label); */
-    /* if (node->inc) */
-    /*   gen_expr(node->inc); */
-    /* println("  jmp .L.begin.%d", c); */
-    /* println("$%s:", node->brk_label); */
+    int c = count();
+    if (node->init)
+      gen_stmt(node->init);
+    println(".L.begin.%d:", c);
+    if (node->cond) {
+      gen_expr(node->cond);
+      println("  jz s3 %s", node->brk_label);
+    }
+    gen_stmt(node->then);
+    println("%s:", node->cont_label);
+    if (node->inc)
+      gen_expr(node->inc);
+    println("  jmp .L.begin.%d", c);
+    println("%s:", node->brk_label);
     return;
   }
   case ND_DO: {
-    /* int c = count(); */
-    /* println(".L.begin.%d:", c); */
-    /* gen_stmt(node->then); */
-    /* println("$%s:", node->cont_label); */
-    /* gen_expr(node->cond); */
-    /* cmp_zero(node->cond->ty); */
-    /* println("  jne .L.begin.%d", c); */
-    /* println("$%s:", node->brk_label); */
+    int c = count();
+    println(".L.begin.%d:", c);
+    gen_stmt(node->then);
+    println("%s:", node->cont_label);
+    gen_expr(node->cond);
+    println("  jnz s3 .L.begin.%d", c);
+    println("%s:", node->brk_label);
+    warn_tok(node->tok, "Operation unsupported atm");
     return;
   }
   case ND_SWITCH:
@@ -432,6 +432,7 @@ static void gen_stmt(Node *node) {
     /* println("  jmp %s", node->brk_label); */
     /* gen_stmt(node->then); */
     /* println("$%s:", node->brk_label); */
+    warn_tok(node->tok, "Operation unsupported atm");
     return;
   case ND_CASE:
     println("$%s:", node->label);
@@ -489,7 +490,7 @@ void print_escaped_data(Obj* data) {
 }
 
 static void emit_globals(Obj *prog) {
-  for (Obj *var = prog; var; var = var->next) {
+  for (Obj *var = prog; var && !pure_mur; var = var->next) {
     if (var->is_function || !var->is_definition)
       continue;
 
@@ -523,7 +524,7 @@ static void emit_text(Obj *prog) {
     current_fn = fn;
 
     // locals
-    for (Obj *var = fn->locals; var; var = var->next) {
+    for (Obj *var = fn->locals; var && !pure_mur; var = var->next) {
       if (var->name[0] == 0) {
         var->name = calloc(1, snprintf(NULL, 0, ".OFFSET.%d", var->offset));
         sprintf(var->name, "V.NONAME.%d", count());
@@ -556,7 +557,7 @@ static void emit_text(Obj *prog) {
       println("  mov l.%s r%d", var->name, reg);
     }
     // clear non-static locals
-    for (Obj *var = fn->locals; var; var = var->next) {
+    for (Obj *var = fn->locals; var && !pure_mur; var = var->next) {
       if (!var->is_static)
         println("  movz l.%s", var->name);
     }
