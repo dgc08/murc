@@ -358,6 +358,9 @@ static void gen_expr(Node *node) {
   case ND_SHR:
     error("SHR unsupported");
     return;
+  case ND_ASM:
+    println("  %s", node->asm_str);
+    return;
   }
 
   error_tok(node->tok, "invalid expression");

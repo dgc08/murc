@@ -3124,6 +3124,12 @@ static Node *primary(Token **rest, Token *tok) {
     return node;
   }
 
+  if (equal(tok, "asm")) {
+    Node* node =  asm_stmt(rest, tok);
+    node->ty = ty_uint;
+    return node;
+  }
+
   error_tok(tok, "expected an expression");
 }
 
