@@ -332,7 +332,18 @@ static void gen_expr(Node *node) {
       println("  add s3 s2");
       return;
     case ND_SUB:
+      gen_expr(node->lhs);
+      println("  mov s2 s3");
+      gen_expr(node->rhs);
+      println("  sub s3 s2");
+      return;
     case ND_MUL:
+      gen_expr(node->lhs);
+      println("  mov s2 s3");
+      gen_expr(node->rhs);
+      println("  mul s6 s3 s2");
+      println("  mov s3 s6");
+      return;
     case ND_DIV:
     case ND_MOD:
       warn_tok(node->tok, "Arithmetic Operation unsupported atm");
@@ -347,6 +358,20 @@ static void gen_expr(Node *node) {
     error("BITXOR unsupported");
     return;
   case ND_EQ:
+  {
+    int c = count();
+    gen_expr(node->lhs);
+    println("  mov s2 s3");
+    gen_expr(node->rhs);
+    println("  sub s3 s2");
+    println("  jz s3 .L.set_true.%d", c);
+    println("  movz s3");
+    println("  jmp .L.end.%d", c);
+    println("  .L.set_true.%d:", c);
+    println("  inc s3");
+    println("  .L.end.%d:", c);
+  }
+    return;
   case ND_NE:
   case ND_LT:
   case ND_LE:
@@ -372,7 +397,7 @@ static void gen_stmt(Node *node) {
   case ND_IF: {
     int c = count();
     gen_expr(node->cond);
-    println("  jz  s3 .L.else.%d", c);
+    println("  jz s3 .L.else.%d", c);
     gen_stmt(node->then);
     println("  jmp .L.end.%d", c);
     println(".L.else.%d:", c);
